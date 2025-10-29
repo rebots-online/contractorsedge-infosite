@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+  <!-- Chosen Palette: "Warm Neutral" (Slate, Stone, with Amber accent) -->
+  <!-- 
+    Application Structure Plan: I've designed this SPA as a tabbed dashboard. The main navigation ('Overview', 'Architecture', 'Features', 'Key Details', 'Risks') allows for non-linear exploration of the PRD, which is more intuitive for a stakeholder than a linear document. 
+    - 'Overview' acts as a landing page with the exec summary and value prop.
+    - 'Architecture' uses interactive cards for the 6 components (better than a static table).
+    - 'Features (Epics)' uses sub-tabs to manage the density of user stories, applying progressive disclosure.
+    - 'Key Details' houses the data-heavy parts, including an interactive Chart.js visualization for the HST data, which is far more engaging than the source table.
+    - 'Risks' uses an accordion to make the list scannable.
+    This structure is chosen to make the dense PRD content digestible, interactive, and easy to navigate based on the user's interest.
+  -->
+  <!-- 
+    Visualization & Content Choices:
+    - Report Info: Executive Summary / Differentiators -> Goal: Inform -> Viz/Presentation: Interactive Cards (HTML/Tailwind) -> Interaction: Hover/Active state -> Justification: More engaging than text.
+    - Report Info: Core Architecture Table -> Goal: Organize -> Viz/Presentation: Interactive Grid of Cards (HTML/JS) -> Interaction: Click to show details (mock) -> Justification: Transforms a static table into an explorable UI.
+    - Report Info: 5 Feature Epics -> Goal: Organize -> Viz/Presentation: Tabbed Navigation (HTML/JS) -> Interaction: Click tab to show relevant user stories -> Justification: Manages complexity, prevents a giant list.
+    - Report Info: HST Tax Rate Table -> Goal: Compare/Inform -> Viz/Presentation: Bar Chart (Chart.js/Canvas) + Select Filter -> Interaction: User selects tax type (HST, GST+PST, etc.) from a dropdown, JS filters data and updates chart. -> Justification: Makes quantitative data dynamic and understandable.
+    - Report Info: Risks & Mitigations -> Goal: Organize/Inform -> Viz/Presentation: Accordion List (HTML/JS) -> Interaction: Click to expand/collapse item -> Justification: Makes a long list scannable and clean.
+    - Library/Method: Vanilla JS for all state/DOM manipulation, Chart.js for the bar chart.
+  -->
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRD Explorer: The Contractor's Edge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+        height: 400px;
+        max-height: 500px;
+      }
+      [data-tab-content],
+      [data-epic-content] {
+        display: none;
+      }
+      [data-tab-content].active,
+      [data-epic-content].active {
+        display: block;
+      }
+      nav a.active {
+        border-color: #f59e0b;
+        color: #d97706;
+      }
+      button.active {
+        background-color: #f59e0b;
+        color: #ffffff;
+      }
+    </style>
+  </head>
+  <body class="h-full text-slate-800">
+    <div class="flex min-h-full flex-col">
+      <header class="bg-white shadow-sm">
+        <div
+          class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between"
+        >
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+            PRD Explorer: The Contractor's Edge
+          </h1>
+          <nav
+            id="main-nav"
+            class="mt-4 md:mt-0 flex flex-wrap gap-x-4 gap-y-2"
+          >
+            <a
+              href="#"
+              data-nav-link="overview"
+              class="active text-sm font-medium border-b-2 border-transparent px-1 py-1 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >Overview</a
+            >
+            <a
+              href="#"
+              data-nav-link="architecture"
+              class="text-sm font-medium border-b-2 border-transparent px-1 py-1 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >Architecture</a
+            >
+            <a
+              href="#"
+              data-nav-link="features"
+              class="text-sm font-medium border-b-2 border-transparent px-1 py-1 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >Features (Epics)</a
+            >
+            <a
+              href="#"
+              data-nav-link="details"
+              class="text-sm font-medium border-b-2 border-transparent px-1 py-1 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >Key Details</a
+            >
+            <a
+              href="#"
+              data-nav-link="risks"
+              class="text-sm font-medium border-b-2 border-transparent px-1 py-1 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >Risks</a
+            >
+          </nav>
+        </div>
+      </header>
+
+      <main class="flex-auto py-10">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <!-- Overview Section -->
+          <section data-nav-content="overview" class="active">
+            <p class="mb-6 text-slate-600">
+              This section provides a high-level summary of the product, its
+              core value proposition, and the target audience. It's the "why"
+              behind the project.
+            </p>
+            <div
+              class="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-xl bg-white p-6 shadow-lg"
+            >
+              <div class="md:col-span-2">
+                <h2
+                  class="text-sm font-semibold uppercase tracking-wide text-amber-600"
+                >
+                  Executive Summary
+                </h2>
+                <p class="mt-2 text-xl font-semibold text-slate-900">
+                  A "visual-first" collaborative SaaS for Canadian contractors.
+                </p>
+                <p class="mt-4 text-slate-600">
+                  We are building an autonomous business-in-a-box, powered by a
+                  custom Odoo CE backend, that uses a shared visual canvas (like
+                  Excalidraw) as its primary UI. This "two-way dashboard" allows
+                  contractors and their clients to manage projects, review
+                  finances, and get status updates in a simple, interactive
+                  space, while an AI agent and automated workflows handle >90% of
+                  the backend administrative work.
+                </p>
+              </div>
+              <div
+                class="md:col-span-1 rounded-lg bg-slate-50 p-4 border border-slate-200"
+              >
+                <h3 class="font-semibold text-slate-900">Target Audience</h3>
+                <ul class="mt-2 space-y-3">
+                  <li class="flex items-start">
+                    <span class="text-amber-600 w-6 h-6 flex-shrink-0"
+                      >&#9733;</span
+                    >
+                    <div>
+                      <h4 class="font-medium">Primary Customer</h4>
+                      <p class="text-sm text-slate-600">
+                        General contractors & home builders in Canada (1-30
+                        employees).
+                      </p>
+                    </div>
+                  </li>
+                  <li class="flex items-start">
+                    <span class="text-amber-600 w-6 h-6 flex-shrink-0"
+                      >&#128100;</span
+                    >
+                    <div>
+                      <h4 class="font-medium">Primary User</h4>
+                      <p class="text-sm text-slate-600">
+                        The non-technical owner/operator.
+                      </p>
+                    </div>
+                  </li>
+                  <li class="flex items-start">
+                    <span class="text-amber-600 w-6 h-6 flex-shrink-0"
+                      >&#128109;</span
+                    >
+                    <div>
+                      <h4 class="font-medium">Secondary User</h4>
+                      <p class="text-sm text-slate-600">
+                        The contractor's end-client (homeowner).
+                      </p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="mt-8">
+              <h2
+                class="text-xl font-semibold text-center text-slate-900 mb-6"
+              >
+                Core Differentiators
+              </h2>
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+              >
+                <div class="rounded-xl bg-white p-6 shadow-lg">
+                  <span class="text-3xl">&#128187;</span>
+                  <h3 class="mt-2 font-semibold">
+                    The Collaborative Visual Shell
+                  </h3>
+                  <p class="mt-2 text-sm text-slate-600">
+                    A React/Excalidraw-like canvas is the primary UI, not a
+                    traditional ERP form.
+                  </p>
+                </div>
+                <div class="rounded-xl bg-white p-6 shadow-lg">
+                  <span class="text-3xl">&#129302;</span>
+                  <h3 class="mt-2 font-semibold">The Autonomous Engine</h3>
+                  <p class="mt-2 text-sm text-slate-600">
+                    A headless Odoo backend autonomously handles invoices, 3-way
+                    matching, and HST/GST.
+                  </p>
+                </div>
+                <div class="rounded-xl bg-white p-6 shadow-lg">
+                  <span class="text-3xl">&#129504;</span>
+                  <h3 class="mt-2 font-semibold">The AI "Business Partner"</h3>
+                  <p class="mt-2 text-sm text-slate-600">
+                    A resident RAG-based LLM agent that can be queried and can
+                    perform actions.
+                  </p>
+                </div>
+                <div class="rounded-xl bg-white p-6 shadow-lg">
+                  <span class="text-3xl">&#128222;</span>
+                  <h3 class="mt-2 font-semibold">
+                    Integrated Communications
+                  </h3>
+                  <p class="mt-2 text-sm text-slate-600">
+                    VitalPBX integration logs calls and links them directly to
+                    projects and clients.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Architecture Section -->
+          <section data-nav-content="architecture" class="hidden">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+              Core Architecture
+            </h2>
+            <p class="mt-4 mb-6 text-slate-600">
+              The product is built on a modern, decoupled architecture. This
+              separates the user-facing application from the core business
+              logic, allowing for scalability and flexibility. Below are the 6
+              key components.
+            </p>
+            <div
+              id="architecture-grid"
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              <!-- Architecture cards will be injected here by JS -->
+            </div>
+          </section>
+
+          <!-- Features (Epics) Section -->
+          <section data-nav-content="features" class="hidden">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+              Features (User Epics)
+            </h2>
+            <p class="mt-4 mb-6 text-slate-600">
+              These epics describe the primary user journeys and key features of
+              the product, from initial signup to daily use. Select an epic to
+              see its associated user stories.
+            </p>
+            <div class="rounded-xl bg-white p-6 shadow-lg">
+              <div
+                id="epics-nav"
+                class="mb-4 border-b border-slate-200 flex flex-wrap gap-2"
+              >
+                <!-- Epics tabs will be injected here by JS -->
+              </div>
+              <div id="epics-content" class="min-h-[300px]">
+                <!-- Epics content will be injected here by JS -->
+              </div>
+            </div>
+          </section>
+
+          <!-- Key Details Section -->
+          <section data-nav-content="details" class="hidden">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+              Key Details & Deep Dives
+            </h2>
+            <p class="mt-4 mb-6 text-slate-600">
+              This section provides a deeper look into the most complex and
+              critical components of the system: the financial engine and the AI
+              agent.
+            </p>
+            <div class="rounded-xl bg-white shadow-lg overflow-hidden">
+              <div
+                id="details-nav"
+                class="border-b border-slate-200 bg-slate-50"
+              >
+                <button
+                  data-details-tab="finance"
+                  class="details-tab active py-3 px-6 text-sm font-medium text-slate-700"
+                >
+                  Autonomous Financial Engine
+                </button>
+                <button
+                  data-details-tab="ai"
+                  class="details-tab py-3 px-6 text-sm font-medium text-slate-700"
+                >
+                  AI Agent Deep Dive
+                </button>
+              </div>
+              <div class="p-6">
+                <!-- Finance Content -->
+                <div data-details-content="finance" class="active">
+                  <h3 class="text-lg font-semibold text-slate-900 mb-4">
+                    Canadian HST/GST Compliance
+                  </h3>
+                  <p class="text-slate-600 mb-4">
+                    A core feature is the autonomous calculation of Canadian
+                    sales tax. The system uses a dynamic rule engine, not
+                    hard-coded values, to handle the complexity of provincial
+                    taxes.
+                  </p>
+                  <div class="mb-6">
+                    <label
+                      for="taxFilter"
+                      class="block text-sm font-medium text-slate-700"
+                      >Filter by Tax Type:</label
+                    >
+                    <select
+                      id="taxFilter"
+                      class="mt-1 block w-full md:w-1/3 rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                    >
+                      <option value="all">Show All Provinces</option>
+                      <option value="hst">HST</option>
+                      <option value="gst_pst">GST + PST</option>
+                      <option value="gst_only">GST Only</option>
+                    </select>
+                  </div>
+                  <div class="chart-container">
+                    <canvas id="hstChart"></canvas>
+                  </div>
+                  <div class="mt-8">
+                    <h4 class="text-md font-semibold text-slate-900 mb-2">
+                      Key Financial Automations
+                    </h4>
+                    <ul class="space-y-4">
+                      <li
+                        class="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                      >
+                        <h5 class="font-medium">
+                          Automated Three-Way Matching
+                        </h5>
+                        <p class="text-sm text-slate-600">
+                          Compares Purchase Order, Vendor Bill, and Good Receipt
+                          Note to flag discrepancies before payment.
+                        </bodyp>
+                      </li>
+                      <li
+                        class="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                      >
+                        <h5 class="font-medium">AI-Powered OCR</h5>
+                        <p class="text-sm text-slate-600">
+                          Digitizes and extracts data from uploaded paper or PDF
+                          supplier invoices, creating templates per supplier to
+                          improve speed.
+                        </bodyp>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <!-- AI Content -->
+                <div data-details-content="ai" class="hidden">
+                  <h3 class="text-lg font-semibold text-slate-900 mb-4">
+                    AI Agent Deep Dive
+                  </h3>
+                  <p class="text-slate-600 mb-6">
+                    The AI guide is an agentic system, not a simple chatbot. It's
+                    designed to understand intent, perform multi-step tasks,
+                    and provide accurate, context-aware information.
+                  </p>
+                  <div class="space-y-4">
+                    <div
+                      class="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <h5 class="font-medium">
+                        Contextual & Agentic (RAG)
+                      </h5>
+                      <p class="text-sm text-slate-600">
+                        Grounded in Retrieval-Augmented Generation (RAG) to
+                        ensure responses are accurate and sourced from our
+                        internal knowledge base (LMS content, Canadian tax
+                        guides, etc.).
+                      </p>
+                    </div>
+                    <div
+                      class="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <h5 class="font-medium">Agentic Design Patterns</h5>
+                      <p class="text-sm text-slate-600">
+                        <strong class="text-slate-700"
+                          >Orchestrator-Workers:</strong
+                        >
+                        A central LLM interprets commands and delegates
+                        subtasks to specialized "worker" LLMs or Odoo API
+                        tools.
+                      </p>
+                      <p class="text-sm text-slate-600 mt-2">
+                        <strong class="text-slate-700"
+                          >Evaluator-Optimizer Loop:</strong
+                        >
+                        An evaluator loop continuously assesses the quality of
+                        its outputs (clarity, correctness) to refine
+                        performance and minimize hallucinations.
+                      </contentp>
+                    </div>
+                    <div
+                      class="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <h5 class="font-medium">
+                        Learning Management System (LMS)
+                      </h5>
+                      <p class="text-sm text-slate-600">
+                        The knowledge base for the RAG is our own LMS, offering
+                        courses on job costing, tax, etc. The LLM will
+                        proactively recommend content based on user activity.
+                      </bodyp>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Risks Section -->
+          <section data-nav-content="risks" class="hidden">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+              Risk Assessment & Mitigation
+            </h2>
+            <p class="mt-4 mb-6 text-slate-600">
+              This section outlines the key technical, usability, and compliance
+              risks identified for the project, along with their corresponding
+              mitigation strategies.
+            </p>
+            <div id="risks-accordion" class="space-y-3">
+              <!-- Risks will be injected here by JS -->
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const mainNav = document.getElementById("main-nav");
+        const navLinks = mainNav.querySelectorAll("[data-nav-link]");
+        const contentSections = document.querySelectorAll("[data-nav-content]");
+
+        const architectureGrid = document.getElementById("architecture-grid");
+        const epicsNav = document.getElementById("epics-nav");
+        const epicsContent = document.getElementById("epics-content");
+        const detailsNav = document.getElementById("details-nav");
+        const risksAccordion = document.getElementById("risks-accordion");
+        const taxFilter = document.getElementById("taxFilter");
+
+        const data = {
+          architecture: [
+            {
+              id: "billing",
+              title: "SaaS Billing Gateway",
+              tech: "RevenueCat",
+              function:
+                "Manages all SaaS subscriptions, plans, and entitlements. Acts as the 'gatekeeper' for features.",
+            },
+            {
+              id: "shell",
+              title: "Collaborative Visual Shell",
+              tech: "React (Next.js), Excalidraw, TailwindCSS",
+              function:
+                "The primary client-facing web app. The 'two-way dashboard' that communicates with Odoo via REST API.",
+            },
+            {
+              id: "engine",
+              title: "Core Business Engine",
+              tech: "Odoo 17 CE (Dockerized)",
+              function:
+                "The 'headless' ERP backbone. Runs all core business logic: Accounting, Project Management, CRM, Sales, Inventory.",
+            },
+            {
+              id: "comms",
+              title: "Communications Hub",
+              tech: "VitalPBX Free Edition (Dockerized)",
+              function:
+                "Handles all VoIP telephony. Integrates with Odoo's CRM via secure WebSocket and API.",
+            },
+            {
+              id: "ai",
+              title: "AI Agent & Knowledge Base",
+              tech: "Odoo llm module, RAG, Vector DB",
+              function:
+                "Provides the resident LLM guide. Grounded in a knowledge base and uses agentic patterns to execute tasks.",
+            },
+            {
+              id: "deployment",
+              title: "Provisioning & Deployment",
+              tech: "Docker, Coolify (or similar)",
+              function:
+                "Manages the automated spin-up of new, isolated Odoo + VitalPBX instances for each new customer.",
+            },
+          ],
+          epics: [
+            {
+              id: "epic1",
+              title: "Onboarding & Billing",
+              stories: [
+                "As a contractor, I want to visit the marketing site, choose a subscription plan, and pay with my credit card.",
+                "As a system admin, I want RevenueCat to process the payment and send a webhook to my provisioning service.",
+                "As a system admin, I want the provisioning service to automatically spin up a new, containerized Odoo + VitalPBX instance.",
+                "As a new contractor, I want to receive a 'Welcome' email with my login link to the React app within 5 minutes.",
+                "As a contractor, I want the React app to check my subscription status with RevenueCat to unlock features.",
+              ],
+            },
+            {
+              id: "epic2",
+              title: "Project Canvas",
+              stories: [
+                "As a contractor, I want to see all my active projects as visual cards or nodes on an infinite canvas.",
+                "As a contractor, I want to click a project to zoom into its 'Project Canvas,' which shows tasks, timelines, budget, etc.",
+                "As a contractor, I want to drag an 'invoice' (from Odoo) onto a 'project' on the canvas to visually associate it.",
+                "As a contractor, I want to draw an arrow between 'Task A' and 'Task B' to create a dependency in the Odoo backend.",
+                "As a contractor, I want to right-click a task and mark it 'Complete,' which updates the project.task record in Odoo.",
+                "As a contractor, I want to see 'live' data from Odoo (like 'Budget vs. Actual') displayed on a node in the canvas.",
+                "As a contractor, I want to share a unique, read-only link to a simplified version of the Project Canvas with my client.",
+              ],
+            },
+            {
+              id: "epic3",
+              title: "Client Collaboration",
+              stories: [
+                "As a client (homeowner), I want to open the shared canvas link and see the real-time status of my project.",
+                "As a client, I want to see a 'Change Order' node appear on my canvas, click it to review the details, and press an 'Approve' button.",
+                "As a client, I want to drop a 'Question' pin onto a visual floor plan (on the canvas) to ask my contractor something.",
+                "As a contractor, I want my client's 'Approval' to automatically update the sales order and project task in Odoo.",
+                "As a contractor, I want my client's 'Question' to automatically create a new task or CRM ticket assigned to me.",
+              ],
+            },
+            {
+              id: "epic4",
+              title: "Financial Engine",
+              stories: [
+                "As a contractor, I want the system to automatically generate a draft invoice when I mark a project milestone as 'Complete'.",
+                "As a contractor, I want the system to use AI (OCR) to scan a supplier bill and match it to a purchase order (3-way matching).",
+                "As a contractor, I want the system to autonomously and correctly calculate the 13% HST (Ontario) or 5% GST (Alberta) on all invoices.",
+                "As a contractor, I want the system to generate a 'Monthly HST Report' that tells me exactly what I owe the CRA.",
+                "As a contractor, I want to ask the LLM guide, 'What are the HST rules for a new build vs. a renovation?' and get a correct answer.",
+              ],
+            },
+            {
+              id: "epic5",
+              title: "Comms & AI Guide",
+              stories: [
+                "As a contractor, when a client calls my VitalPBX number, I want a pop-up in the React app showing their name and project link.",
+                "As a contractor, I want all call logs to be automatically attached to the client's CRM record in Odoo.",
+                "As a contractor, I want to ask the LLM guide, 'How do I do job costing for a small reno?' and have it show me a video/article.",
+                "As a contractor, I want to ask the LLM, 'Show me my top 5 clients by revenue last month,' and have it generate a visual report node.",
+              ],
+            },
+          ],
+          taxData: [
+            {
+              province: "Ontario",
+              rate: 13,
+              type: "hst",
+              notes: "Mandatory electronic filing for most.",
+            },
+            {
+              province: "Atlantic (NB, NL, PEI)",
+              rate: 15,
+              type: "hst",
+              notes: "NB, NL, PEI.",
+            },
+            {
+              province: "Nova Scotia",
+              rate: 14,
+              type: "hst",
+              notes: "Rate reduced from 15% eff. Apr 1, 2025.",
+            },
+            {
+              province: "British Columbia",
+              rate: 5,
+              type: "gst_pst",
+              notes: "5% GST + 7% PST",
+            },
+            {
+              province: "Quebec",
+              rate: 5,
+              type: "gst_pst",
+              notes: "5% GST + 9.975% QST",
+            },
+            {
+              province: "Manitoba",
+              rate: 5,
+              type: "gst_pst",
+              notes: "5% GST + 7% PST",
+            },
+            {
+              province: "Saskatchewan",
+              rate: 5,
+              type: "gst_pst",
+              notes: "5% GST + 6% PST",
+            },
+            {
+              province: "Alberta & Territories",
+              rate: 5,
+              type: "gst_only",
+              notes: "No provincial sales tax.",
+            },
+          ],
+          risks: [
+            {
+              id: "risk1",
+              title:
+                "Technical Risk: Bi-directional, real-time sync between the visual canvas and Odoo's database is complex.",
+              mitigation:
+                "Do not sync the entire Odoo DB in real-time. Use a dedicated, lightweight real-time database (like Firestore or WebSocket server) to sync *only* the canvas state (positions, connections). This state DB then uses the Odoo API to pull/push business data (task names, statuses) asynchronously. This keeps the canvas fast.",
+            },
+            {
+              id: "risk2",
+              title:
+                "Usability Risk: A blank canvas can be intimidating ('blank canvas syndrome').",
+              mitigation:
+                "Provide pre-built 'Project Templates' (for 'Kitchen Reno', 'New Build', etc.) that the contractor can drag onto their canvas to get started instantly. The LLM agent can also suggest layouts or build a project from a simple prompt.",
+            },
+            {
+              id: "risk3",
+              title:
+                "Billing Risk: Managing fractional/failed subscriptions and provisioning/de-provisioning instances.",
+              mitigation:
+                "Use RevenueCat to handle all subscription lifecycle events (trials, renewals, cancellations, dunning). Our only job is to listen for `entitlement: active` or `entitlement: revoked` webhooks to trigger the automated provisioning/suspension scripts.",
+            },
+            {
+              id: "risk4",
+              title:
+                "Compliance Risk: Maintaining long-term HST/GST compliance in a changing legal landscape.",
+              mitigation:
+                "1. **Dynamic Rule Engine:** Tax rates and rules will be stored in a configurable database, *not* hard-coded. \n2. **Compliance Monitoring:** Retain a Canadian tax consultant to review the logic quarterly and monitor CRA announcements. \n3. **Transparency:** Terms of service will state the system is for assistance and not a substitute for professional tax advice.",
+            },
+            {
+              id: "risk5",
+              title:
+                "LLM Risk: Ensuring reliability and accuracy of the LLM guide (preventing hallucinations).",
+              mitigation:
+                "1. **Rigorous RAG:** Build a comprehensive and meticulously curated internal knowledge base (LMS). \n2. **Agentic Patterns:** Use the Evaluator-Optimizer pattern to cross-check facts and correct mistakes. \n3. **Human-in-the-Loop (HITL):** For critical financial actions (e.g., 'File my HST return'), the LLM guide must *always* require explicit user confirmation before executing.",
+            },
+            {
+              id: "risk6",
+              title:
+                "Integration Risk: Challenges in integrating VitalPBX Free Edition with Odoo CE.",
+              mitigation:
+                "1. **Thorough Testing:** Establish a dedicated test environment that mirrors production to solve WebSocket, NAT traversal, and firewall issues early. \n2. **Robust Documentation:** Create detailed, step-by-step configuration guides. \n3. **Monitor Updates:** Closely monitor release notes for both Odoo and VitalPBX and have a process to test patches quickly.",
+            },
+          ],
+        };
+
+        // Main Navigation
+        mainNav.addEventListener("click", (e) => {
+          e.preventDefault();
+          const link = e.target.closest("[data-nav-link]");
+          if (!link) return;
+
+          const targetId = link.dataset.navLink;
+
+          navLinks.forEach((navLink) => {
+            navLink.classList.remove("active");
+            if (navLink.dataset.navLink === targetId) {
+              navLink.classList.add("active");
+            }
+          });
+
+          contentSections.forEach((section) => {
+            section.classList.toggle(
+              "active",
+              section.dataset.navContent === targetId
+            );
+            section.classList.toggle(
+              "hidden",
+              section.dataset.navContent !== targetId
+            );
+          });
+        });
+
+        // Render Architecture
+        function renderArchitecture() {
+          if (!architectureGrid) return;
+          architectureGrid.innerHTML = data.architecture
+            .map(
+              (item) => `
+            <div class="rounded-xl bg-white p-6 shadow-lg transform transition-transform hover:scale-105 cursor-pointer">
+              <h3 class="font-semibold text-lg text-slate-900">${item.title}</h3>
+              <p class="mt-2 text-sm font-medium text-amber-600">${item.tech}</p>
+              <p class="mt-3 text-sm text-slate-600">${item.function}</p>
+            </div>
+          `
+            )
+            .join("");
+        }
+
+        // Render Epics
+        function renderEpics() {
+          if (!epicsNav || !epicsContent) return;
+
+          epicsNav.innerHTML = data.epics
+            .map(
+              (epic, index) => `
+            <button 
+              data-epic-tab="${epic.id}" 
+              class="epic-tab ${
+                index === 0 ? "active" : ""
+              } py-2 px-4 text-sm font-medium rounded-md hover:bg-slate-100"
+            >
+              ${epic.title}
+            </button>
+          `
+            )
+            .join("");
+
+          epicsContent.innerHTML = data.epics
+            .map(
+              (epic, index) => `
+            <div data-epic-content="${epic.id}" class="${
+                index === 0 ? "active" : ""
+              }">
+              <ul class="space-y-3 list-disc pl-5 text-slate-600">
+                ${epic.stories.map((story) => `<li>${story}</li>`).join("")}
+              </ul>
+            </div>
+          `
+            )
+            .join("");
+
+          epicsNav.addEventListener("click", (e) => {
+            const tab = e.target.closest("[data-epic-tab]");
+            if (!tab) return;
+
+            const targetId = tab.dataset.epicTab;
+
+            epicsNav
+              .querySelectorAll("[data-epic-tab]")
+              .forEach((t) => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            epicsContent
+              .querySelectorAll("[data-epic-content]")
+              .forEach((content) => {
+                content.classList.toggle(
+                  "active",
+                  content.dataset.epicContent === targetId
+                );
+              });
+          });
+        }
+
+        // Render Details Tabs
+        function renderDetailsTabs() {
+          if (!detailsNav) return;
+          const tabs = detailsNav.querySelectorAll("[data-details-tab]");
+          const contents = detailsNav.parentElement.querySelectorAll(
+            "[data-details-content]"
+          );
+
+          detailsNav.addEventListener("click", (e) => {
+            const tab = e.target.closest("[data-details-tab]");
+            if (!tab) return;
+
+            const targetId = tab.dataset.detailsTab;
+
+            tabs.forEach((t) => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            contents.forEach((content) => {
+              content.classList.toggle(
+                "active",
+                content.dataset.detailsContent === targetId
+              );
+              content.classList.toggle(
+                "hidden",
+                content.dataset.detailsContent !== targetId
+              );
+            });
+          });
+        }
+
+        // Render Risks
+        function renderRisks() {
+          if (!risksAccordion) return;
+          risksAccordion.innerHTML = data.risks
+            .map(
+              (risk) => `
+            <div class="rounded-xl bg-white shadow-lg overflow-hidden">
+              <button data-risk-toggle="${
+                risk.id
+              }" class="w-full flex justify-between items-center text-left p-6 hover:bg-slate-50">
+                <span class="font-medium text-slate-900">${risk.title}</span>
+                <span class="plus-icon text-xl font-medium text-slate-500">+</span>
+              </button>
+              <div data-risk-content="${
+                risk.id
+              }" class="hidden p-6 bg-slate-50 border-t border-slate-200">
+                <p class="text-slate-600 whitespace-pre-line">${
+                  risk.mitigation
+                }</p>
+              </div>
+            </div>
+          `
+            )
+            .join("");
+
+          risksAccordion.addEventListener("click", (e) => {
+            const toggle = e.target.closest("[data-risk-toggle]");
+            if (!toggle) return;
+
+            const content = toggle.nextElementSibling;
+            const icon = toggle.querySelector(".plus-icon");
+            const isHidden = content.classList.contains("hidden");
+
+            content.classList.toggle("hidden", !isHidden);
+            icon.textContent = isHidden ? "–" : "+";
+          });
+        }
+
+        // Chart.js Logic
+        let hstChartInstance = null;
+        function initChart(chartData) {
+          const ctx = document.getElementById("hstChart");
+          if (!ctx) return;
+
+          const labels = chartData.map((d) => d.province);
+          const rates = chartData.map((d) => d.rate);
+
+          if (hstChartInstance) {
+            hstChartInstance.destroy();
+          }
+
+          hstChartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: "Tax Rate (Primary Rate shown)",
+                  data: rates,
+                  backgroundColor: "#f59e0b",
+                  borderColor: "#d97706",
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: "Tax Rate (%)",
+                  },
+                },
+              },
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                title: {
+                  display: true,
+                  text: "Canadian Sales Tax Rates by Province",
+                },
+                tooltip: {
+                  callbacks: {
+                    footer: (tooltipItems) => {
+                      const index = tooltipItems[0].dataIndex;
+                      return chartData[index].notes;
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }
+
+        function updateChart() {
+          const filterValue = taxFilter.value;
+          let filteredData = data.taxData;
+
+          if (filterValue !== "all") {
+            filteredData = data.taxData.filter(
+              (d) => d.type === filterValue
+            );
+          }
+
+          const labels = filteredData.map((d) => d.province);
+          const rates = filteredData.map((d) => d.rate);
+
+          if (hstChartInstance) {
+            hstChartInstance.data.labels = labels;
+            hstChartInstance.data.datasets[0].data = rates;
+            hstChartInstance.update();
+          }
+        }
+
+        taxFilter.addEventListener("change", updateChart);
+
+        // Initial Renders
+        renderArchitecture();
+        renderEpics();
+        renderDetailsTabs();
+        renderRisks();
+        initChart(data.taxData);
+      });
+    </script>
+  </body>
+</html>
